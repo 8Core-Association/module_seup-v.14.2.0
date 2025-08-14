@@ -241,6 +241,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
         exit;
     }
+    
+    // Handle cleanup orphaned records
+    if (isset($_POST['action']) && GETPOST('action') === 'cleanup_ecm') {
+        header('Content-Type: application/json');
+        ob_end_clean();
+        
+        $result = Predmet_helper::cleanupPredmetECMRecords($db, $conf, $caseId);
+        echo json_encode($result);
+        exit;
+    }
+    
     // Handle manual sync request
     if (isset($_POST['action']) && GETPOST('action') === 'refresh_documents') {
         // Just continue with normal page rendering to return updated HTML
@@ -454,6 +465,9 @@ print '<i class="fas fa-search me-2"></i>Pretraži dokumente';
 print '</button>';
 print '<button type="button" class="seup-btn seup-btn-secondary">';
 print '<i class="fas fa-sort me-2"></i>Sortiraj';
+print '</button>';
+print '<button type="button" class="seup-btn seup-btn-warning" id="cleanupEcmBtn">';
+print '<i class="fas fa-broom me-2"></i>Očisti ECM';
 print '</button>';
 print '</div>';
 print '</div>';
@@ -1060,6 +1074,42 @@ document.addEventListener("DOMContentLoaded", function() {
     document.getElementById('cancelDeleteDocBtn').addEventListener('click', closeDeleteDocModal);
     document.getElementById('confirmDeleteDocBtn').addEventListener('click', confirmDeleteDocument);
 
+    // ECM Cleanup functionality
+    const cleanupEcmBtn = document.getElementById('cleanupEcmBtn');
+    if (cleanupEcmBtn) {
+        cleanupEcmBtn.addEventListener('click', function() {
+            if (confirm('Želite li očistiti ECM zapise koji nemaju odgovarajuće datoteke na disku?')) {
+                this.classList.add('seup-loading');
+                
+                const formData = new FormData();
+                formData.append('action', 'cleanup_ecm');
+                
+                fetch('predmet.php?id=<?php echo $caseId; ?>', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        showMessage(`Očišćeno ${data.cleaned_count} ECM zapisa`, 'success');
+                        // Refresh documents list
+                        setTimeout(() => {
+                            refreshDocumentsList();
+                        }, 1000);
+                    } else {
+                        showMessage('Greška pri čišćenju: ' + data.error, 'error');
+                    }
+                })
+                .catch(error => {
+                    console.error('Cleanup error:', error);
+                    showMessage('Došlo je do greške pri čišćenju', 'error');
+                })
+                .finally(() => {
+                    this.classList.remove('seup-loading');
+                });
+            }
+        });
+    }
     // Close modal when clicking outside
     document.getElementById('deleteDocumentModal').addEventListener('click', function(e) {
         if (e.target === this) {

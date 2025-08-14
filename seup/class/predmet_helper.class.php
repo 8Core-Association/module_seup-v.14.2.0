@@ -876,7 +876,7 @@ class Predmet_helper
 
             // Delete ECM records
             $sql = "DELETE FROM " . MAIN_DB_PREFIX . "ecm_files 
-                    WHERE filepath = '" . $db->escape($archive_path) . "'";
+                    WHERE filepath = '" . $db->escape(rtrim($archive_path, '/')) . "'";
             $db->query($sql);
 
             // Delete predmet record from a_predmet table
@@ -917,6 +917,103 @@ class Predmet_helper
         }
     }
 
+    /**
+     * Cleanup orphaned ECM records for a specific predmet
+     */
+    public static function cleanupPredmetECMRecords($db, $conf, $predmet_id)
+    {
+        try {
+            $relative_path = self::getPredmetFolderPath($predmet_id, $db);
+            $full_path = DOL_DATA_ROOT . '/ecm/' . $relative_path;
+            
+            $cleaned_count = 0;
+            $errors = [];
+            
+            // Get all ECM records for this predmet
+            $sql = "SELECT rowid, filename FROM " . MAIN_DB_PREFIX . "ecm_files 
+                    WHERE filepath = '" . $db->escape(rtrim($relative_path, '/')) . "'
+                    AND entity = " . $conf->entity;
+            
+            $resql = $db->query($sql);
+            if ($resql) {
+                while ($obj = $db->fetch_object($resql)) {
+                    $file_path = $full_path . $obj->filename;
+                    
+                    // If file doesn't exist in filesystem, remove ECM record
+                    if (!file_exists($file_path)) {
+                        $delete_sql = "DELETE FROM " . MAIN_DB_PREFIX . "ecm_files 
+                                      WHERE rowid = " . (int)$obj->rowid;
+                        if ($db->query($delete_sql)) {
+                            $cleaned_count++;
+                            dol_syslog("Cleaned orphaned ECM record: " . $obj->filename, LOG_INFO);
+                        } else {
+                            $errors[] = "Failed to clean: " . $obj->filename;
+                        }
+                    }
+                }
+            }
+            
+            return [
+                'success' => true,
+                'cleaned_count' => $cleaned_count,
+                'errors' => $errors
+            ];
+            
+        } catch (Exception $e) {
+            return [
+                'success' => false,
+                'error' => $e->getMessage()
+            ];
+        }
+    }
+
+    /**
+     * Cleanup all orphaned ECM records in SEUP
+     */
+    public static function cleanupAllOrphanedECMRecords($db, $conf)
+    {
+        try {
+            $cleaned_count = 0;
+            $errors = [];
+            
+            // Get all SEUP ECM files
+            $sql = "SELECT rowid, filepath, filename FROM " . MAIN_DB_PREFIX . "ecm_files 
+                    WHERE filepath LIKE 'SEUP%'
+                    AND entity = " . $conf->entity;
+            
+            $resql = $db->query($sql);
+            if ($resql) {
+                while ($obj = $db->fetch_object($resql)) {
+                    $full_path = DOL_DATA_ROOT . '/ecm/' . $obj->filepath . '/' . $obj->filename;
+                    
+                    // If file doesn't exist in filesystem, remove ECM record
+                    if (!file_exists($full_path)) {
+                        $delete_sql = "DELETE FROM " . MAIN_DB_PREFIX . "ecm_files 
+                                      WHERE rowid = " . (int)$obj->rowid;
+                        if ($db->query($delete_sql)) {
+                            $cleaned_count++;
+                            dol_syslog("Cleaned orphaned ECM record: " . $obj->filename . " from " . $obj->filepath, LOG_INFO);
+                        } else {
+                            $errors[] = "Failed to clean: " . $obj->filename;
+                        }
+                    }
+                }
+            }
+            
+            return [
+                'success' => true,
+                'message' => "Cleaned {$cleaned_count} orphaned ECM records",
+                'cleaned_count' => $cleaned_count,
+                'errors' => $errors
+            ];
+            
+        } catch (Exception $e) {
+            return [
+                'success' => false,
+                'error' => $e->getMessage()
+            ];
+        }
+    }
     /**
      * Build ORDER BY clause for predmeti with klasa sorting
      */
