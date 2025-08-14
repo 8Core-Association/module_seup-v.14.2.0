@@ -189,6 +189,56 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         exit;
     }
 
+    // Handle document deletion
+    if (isset($_POST['action']) && GETPOST('action') === 'delete_document') {
+        header('Content-Type: application/json');
+        ob_end_clean();
+        
+        $filename = GETPOST('filename', 'alphanohtml');
+        $filepath = GETPOST('filepath', 'alphanohtml');
+        
+        if (empty($filename) || empty($filepath)) {
+            echo json_encode(['success' => false, 'error' => 'Missing filename or filepath']);
+            exit;
+        }
+        
+        try {
+            $db->begin();
+            
+            // Delete from filesystem
+            $full_file_path = DOL_DATA_ROOT . '/ecm/' . $filepath . $filename;
+            $file_deleted = false;
+            if (file_exists($full_file_path)) {
+                $file_deleted = unlink($full_file_path);
+            }
+            
+            // Delete from ECM database
+            $sql = "DELETE FROM " . MAIN_DB_PREFIX . "ecm_files 
+                    WHERE filepath = '" . $db->escape(rtrim($filepath, '/')) . "'
+                    AND filename = '" . $db->escape($filename) . "'
+                    AND entity = " . $conf->entity;
+            
+            $db_deleted = $db->query($sql);
+            
+            if ($db_deleted) {
+                $db->commit();
+                echo json_encode([
+                    'success' => true,
+                    'message' => 'Dokument je uspješno obrisan',
+                    'file_deleted' => $file_deleted,
+                    'db_deleted' => true
+                ]);
+            } else {
+                $db->rollback();
+                echo json_encode(['success' => false, 'error' => 'Greška pri brisanju iz baze: ' . $db->lasterror()]);
+            }
+            
+        } catch (Exception $e) {
+            $db->rollback();
+            echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+        }
+        exit;
+    }
     // Handle manual sync request
     if (isset($_POST['action']) && GETPOST('action') === 'refresh_documents') {
         // Just continue with normal page rendering to return updated HTML
@@ -505,6 +555,67 @@ document.addEventListener("DOMContentLoaded", function() {
         });
     });
 
+    // Document delete functionality
+    document.addEventListener('click', function(e) {
+        if (e.target.closest('.delete-document-btn')) {
+            const btn = e.target.closest('.delete-document-btn');
+            const filename = btn.dataset.filename;
+            const filepath = btn.dataset.filepath;
+            
+            if (confirm(`Jeste li sigurni da želite obrisati dokument "${filename}"?\n\nOva akcija je nepovratna!`)) {
+                btn.classList.add('seup-loading');
+                
+                const formData = new FormData();
+                formData.append('action', 'delete_document');
+                formData.append('filename', filename);
+                formData.append('filepath', filepath);
+                
+                fetch('predmet.php?id=<?php echo $caseId; ?>', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // Remove row from table with animation
+                        const row = btn.closest('tr');
+                        if (row) {
+                            row.style.animation = 'fadeOut 0.5s ease-out';
+                            setTimeout(() => {
+                                row.remove();
+                                updateStatistics();
+                                
+                                // Check if table is now empty
+                                const tbody = document.querySelector('.seup-documents-table tbody');
+                                if (tbody && tbody.children.length === 0) {
+                                    // Replace table with "no documents" message
+                                    const tableContainer = document.querySelector('.seup-documents-table').parentElement;
+                                    tableContainer.innerHTML = `
+                                        <div class="seup-no-documents">
+                                            <i class="fas fa-file-alt seup-no-documents-icon"></i>
+                                            <h5 class="seup-no-documents-title">Nema uploadanih dokumenata</h5>
+                                            <p class="seup-no-documents-description">Dodajte prvi dokument za ovaj predmet</p>
+                                        </div>
+                                    `;
+                                }
+                            }, 500);
+                        }
+                        
+                        showMessage(data.message, 'success');
+                    } else {
+                        showMessage('Greška pri brisanju: ' + data.error, 'error');
+                    }
+                })
+                .catch(error => {
+                    console.error('Delete error:', error);
+                    showMessage('Došlo je do greške pri brisanju dokumenta', 'error');
+                })
+                .finally(() => {
+                    btn.classList.remove('seup-loading');
+                });
+            }
+        }
+    });
     // Get elements safely
     const uploadTrigger = document.getElementById("uploadTrigger");
     const documentInput = document.getElementById("documentInput");

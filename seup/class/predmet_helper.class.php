@@ -442,6 +442,12 @@ class Predmet_helper
                 $documentTableHTML .= '<a href="' . $download_url . '" class="btn btn-outline-primary btn-sm" target="_blank">';
                 $documentTableHTML .= '<i class="fas fa-download"></i>';
                 $documentTableHTML .= '</a>';
+                $documentTableHTML .= '<button class="btn btn-outline-danger btn-sm ms-1 delete-document-btn" ';
+                $documentTableHTML .= 'data-filename="' . htmlspecialchars($doc->filename) . '" ';
+                $documentTableHTML .= 'data-filepath="' . htmlspecialchars($relative_path) . '" ';
+                $documentTableHTML .= 'title="Obriši dokument">';
+                $documentTableHTML .= '<i class="fas fa-trash"></i>';
+                $documentTableHTML .= '</button>';
                 if (isset($doc->comments_count) && $doc->comments_count > 0) {
                     $documentTableHTML .= '<span class="badge bg-secondary ms-1" title="Komentari">' . $doc->comments_count . '</span>';
                 }
