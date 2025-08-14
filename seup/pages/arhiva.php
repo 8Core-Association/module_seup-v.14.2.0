@@ -327,9 +327,6 @@ if (count($arhivirani)) {
         // Action buttons
         print '<td class="seup-table-td">';
         print '<div class="seup-action-buttons">';
-        print '<button class="seup-action-btn seup-btn-view" title="Pregled dokumenata" data-id="' . $arhiva->ID_arhive . '">';
-        print '<i class="fas fa-eye"></i>';
-        print '</button>';
         print '<button class="seup-action-btn seup-btn-restore" title="Vrati u aktivne" data-id="' . $arhiva->ID_arhive . '">';
         print '<i class="fas fa-undo"></i>';
         print '</button>';
@@ -587,15 +584,6 @@ document.addEventListener("DOMContentLoaded", function() {
     });
 
     // Action button handlers
-    document.querySelectorAll('.seup-btn-view').forEach(btn => {
-        btn.addEventListener('click', function() {
-            const id = this.dataset.id;
-            this.classList.add('seup-loading');
-            // Navigate to archive view page
-            window.location.href = `predmet.php?id=${id}&view=archive`;
-        });
-    });
-
     document.querySelectorAll('.seup-btn-restore').forEach(btn => {
         btn.addEventListener('click', function() {
             const id = this.dataset.id;
@@ -688,7 +676,7 @@ document.addEventListener("DOMContentLoaded", function() {
         confirmBtn.classList.add('seup-loading');
         
         const formData = new FormData();
-        formData.append('action', 'delete_archive');
+        formData.append('action', 'restore_predmet');
         formData.append('arhiva_id', currentRestoreId);
         
         fetch('arhiva.php', {
