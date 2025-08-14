@@ -965,6 +965,25 @@ document.addEventListener("DOMContentLoaded", function() {
     // Delete Document Modal Functionality
     let currentDeleteData = null;
 
+    // Add event listener for delete buttons
+    document.addEventListener('click', function(e) {
+        if (e.target.closest('.delete-document-btn')) {
+            e.preventDefault();
+            const btn = e.target.closest('.delete-document-btn');
+            const filename = btn.dataset.filename;
+            const filepath = btn.dataset.filepath;
+            
+            // Store data for modal
+            currentDeleteData = { filename, filepath, button: btn };
+            
+            // Update modal content
+            document.getElementById('deleteDocName').textContent = filename;
+            
+            // Show modal
+            document.getElementById('deleteDocumentModal').classList.add('show');
+        }
+    });
+
     function closeDeleteDocModal() {
         document.getElementById('deleteDocumentModal').classList.remove('show');
         currentDeleteData = null;
