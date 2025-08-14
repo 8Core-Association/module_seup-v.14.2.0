@@ -466,9 +466,6 @@ print '</button>';
 print '<button type="button" class="seup-btn seup-btn-secondary">';
 print '<i class="fas fa-sort me-2"></i>Sortiraj';
 print '</button>';
-print '<button type="button" class="seup-btn seup-btn-warning" id="cleanupEcmBtn">';
-print '<i class="fas fa-broom me-2"></i>Očisti ECM';
-print '</button>';
 print '</div>';
 print '</div>';
 
@@ -1080,36 +1077,6 @@ document.addEventListener("DOMContentLoaded", function() {
         cleanupEcmBtn.addEventListener('click', function() {
             if (confirm('Želite li očistiti ECM zapise koji nemaju odgovarajuće datoteke na disku?')) {
                 this.classList.add('seup-loading');
-                
-                const formData = new FormData();
-                formData.append('action', 'cleanup_ecm');
-                
-                fetch('predmet.php?id=<?php echo $caseId; ?>', {
-                    method: 'POST',
-                    body: formData
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        showMessage(`Očišćeno ${data.cleaned_count} ECM zapisa`, 'success');
-                        // Refresh documents list
-                        setTimeout(() => {
-                            refreshDocumentsList();
-                        }, 1000);
-                    } else {
-                        showMessage('Greška pri čišćenju: ' + data.error, 'error');
-                    }
-                })
-                .catch(error => {
-                    console.error('Cleanup error:', error);
-                    showMessage('Došlo je do greške pri čišćenju', 'error');
-                })
-                .finally(() => {
-                    this.classList.remove('seup-loading');
-                });
-            }
-        });
-    }
     // Close modal when clicking outside
     document.getElementById('deleteDocumentModal').addEventListener('click', function(e) {
         if (e.target === this) {
