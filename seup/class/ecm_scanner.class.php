@@ -111,6 +111,38 @@ class ECM_Scanner
     }
 
     /**
+     * Sync predmet files from Nextcloud to ECM database
+     */
+    public static function syncPredmetFromNextcloud($db, $conf, $user, $predmet_id)
+    {
+        try {
+            if (!$predmet_id) {
+                return [
+                    'success' => false,
+                    'error' => 'Invalid predmet ID',
+                    'synced' => 0
+                ];
+            }
+
+            require_once __DIR__ . '/predmet_helper.class.php';
+            require_once DOL_DOCUMENT_ROOT . '/ecm/class/ecmfiles.class.php';
+
+            $relative_path = Predmet_helper::getPredmetFolderPath($predmet_id, $db);
+            
+            // This method is deprecated - ECM scanner only works with filesystem now
+            return ['success' => true, 'message' => 'Nextcloud sync deprecated', 'synced' => 0];
+
+        } catch (Exception $e) {
+            dol_syslog("Nextcloud sync error: " . $e->getMessage(), LOG_ERR);
+            return [
+                'success' => false,
+                'error' => $e->getMessage(),
+                'synced' => 0
+            ];
+        }
+    }
+
+    /**
      * Scan all SEUP folders and sync with ECM database
      */
     public static function scanAllSeupFolders($db, $conf, $user, $limit = 50)
