@@ -402,7 +402,6 @@ class Predmet_helper
             $documentTableHTML .= '<th>Veličina</th>';
             $documentTableHTML .= '<th>Datum</th>';
             $documentTableHTML .= '<th>Kreirao</th>';
-            $documentTableHTML .= '<th>Izvor</th>';
             $documentTableHTML .= '<th>Akcije</th>';
             $documentTableHTML .= '</tr>';
             $documentTableHTML .= '</thead>';
@@ -415,7 +414,6 @@ class Predmet_helper
                     $file_size = self::formatFileSize($doc->size);
                     $date_formatted = date('d.m.Y H:i', strtotime($doc->last_modified));
                     $created_by = 'Nextcloud';
-                    $source_badge = '<span class="badge bg-info">Nextcloud</span>';
                     $edit_button = $doc->edit_url ? 
                         '<a href="' . $doc->edit_url . '" class="btn btn-outline-success btn-sm me-1" target="_blank" title="Uredi u Nextcloud"><i class="fas fa-edit"></i></a>' : '';
                 } else {
@@ -425,7 +423,6 @@ class Predmet_helper
                     $file_size = 'N/A';
                     $date_formatted = dol_print_date($doc->date_c, 'dayhour');
                     $created_by = $doc->created_by ?: 'N/A';
-                    $source_badge = '<span class="badge bg-primary">Dolibarr</span>';
                     $edit_button = '';
                 }
                 
@@ -440,7 +437,6 @@ class Predmet_helper
                 $documentTableHTML .= '<td>' . $file_size . '</td>';
                 $documentTableHTML .= '<td>' . $date_formatted . '</td>';
                 $documentTableHTML .= '<td>' . htmlspecialchars($created_by) . '</td>';
-                $documentTableHTML .= '<td>' . $source_badge . '</td>';
                 $documentTableHTML .= '<td>';
                 $documentTableHTML .= $edit_button;
                 $documentTableHTML .= '<a href="' . $download_url . '" class="btn btn-outline-primary btn-sm" target="_blank">';
