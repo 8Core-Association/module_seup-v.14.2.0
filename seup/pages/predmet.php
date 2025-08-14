@@ -586,7 +586,7 @@ document.addEventListener("DOMContentLoaded", function() {
                             uploadProgress.style.display = 'none';
                             document.getElementById("documentInput").value = "";
                             showMessage('Dokument je uspješno uploadovan!', 'success');
-                            // Refresh only the documents tab instead of full page reload
+                            // Auto-refresh documents list after successful upload
                             refreshDocumentsList();
                         }, 1000);
                     } else {
@@ -612,63 +612,132 @@ document.addEventListener("DOMContentLoaded", function() {
 
     // Function to refresh documents list
     function refreshDocumentsList() {
-        // Create a form to refresh the documents
-        const refreshForm = document.createElement('form');
-        refreshForm.method = 'POST';
-        refreshForm.style.display = 'none';
+        const formData = new FormData();
+        formData.append('action', 'refresh_documents');
+        formData.append('case_id', <?php echo $caseId; ?>);
         
-        const actionInput = document.createElement('input');
-        actionInput.type = 'hidden';
-        actionInput.name = 'action';
-        actionInput.value = 'refresh_documents';
-        
-        const caseIdInput = document.createElement('input');
-        caseIdInput.type = 'hidden';
-        caseIdInput.name = 'case_id';
-        caseIdInput.value = <?php echo $caseId; ?>;
-        
-        refreshForm.appendChild(actionInput);
-        refreshForm.appendChild(caseIdInput);
-        document.body.appendChild(refreshForm);
-        
-        // Submit form to get updated documents list
-        fetch('', {
+        fetch('predmet.php?id=<?php echo $caseId; ?>', {
             method: 'POST',
-            body: new FormData(refreshForm)
+            body: formData
         })
         .then(response => response.text())
         .then(html => {
             // Extract the documents table from the response
             const parser = new DOMParser();
             const doc = parser.parseFromString(html, 'text/html');
-            const newDocumentsContent = doc.querySelector('#tab-dokumenti');
+            const newDocumentsTab = doc.querySelector('#tab-dokumenti');
             
-            if (newDocumentsContent) {
+            if (newDocumentsTab) {
                 const currentTab = document.getElementById('tab-dokumenti');
                 if (currentTab) {
-                    // Update only the documents content
-                    const documentsSection = currentTab.querySelector('.seup-upload-section').nextElementSibling;
-                    const newDocumentsSection = newDocumentsContent.querySelector('.seup-upload-section').nextElementSibling;
+                    // Find the documents display area (after upload section)
+                    const uploadSection = currentTab.querySelector('.seup-upload-section');
+                    const newUploadSection = newDocumentsTab.querySelector('.seup-upload-section');
                     
-                    if (documentsSection && newDocumentsSection) {
-                        documentsSection.innerHTML = newDocumentsSection.innerHTML;
+                    if (uploadSection && newUploadSection) {
+                        // Replace everything after upload section with new content
+                        const currentContent = uploadSection.nextElementSibling;
+                        const newContent = newUploadSection.nextElementSibling;
                         
-                        // Re-add file type icons
-                        addFileTypeIcons();
+                        if (currentContent && newContent) {
+                            currentContent.outerHTML = newContent.outerHTML;
+                        } else if (newContent) {
+                            // If no current content, append new content
+                            uploadSection.insertAdjacentHTML('afterend', newContent.outerHTML);
+                        }
                         
-                        // Update statistics
-                        updateStatistics();
+                        // Re-add file type icons and update stats
+                        setTimeout(() => {
+                            addFileTypeIcons();
+                            updateStatistics();
+                        }, 100);
                     }
                 }
             }
         })
         .catch(error => {
             console.error('Error refreshing documents:', error);
-            // Fallback to full page reload
-            window.location.reload();
+            // Show error message but don't reload page
+            showMessage('Greška pri osvježavanju liste dokumenata', 'error');
+        });
+    }
+
+    // Enhanced refresh with visual feedback
+    function refreshDocumentsWithFeedback() {
+        // Add subtle loading indicator
+        const documentsHeader = document.querySelector('.seup-documents-header h4');
+        if (documentsHeader) {
+            const originalText = documentsHeader.innerHTML;
+            documentsHeader.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Osvježavam...';
+            
+            refreshDocumentsList();
+            
+            setTimeout(() => {
+                documentsHeader.innerHTML = originalText;
+            }, 2000);
+        } else {
+            refreshDocumentsList();
+        }
+    }
+
+    // Function to refresh documents list (optimized)
+    function refreshDocumentsList() {
+        const formData = new FormData();
+        formData.append('action', 'refresh_documents');
+        formData.append('case_id', <?php echo $caseId; ?>);
+        
+        fetch('predmet.php?id=<?php echo $caseId; ?>', {
+            method: 'POST',
+            body: formData
         })
-        .finally(() => {
-            document.body.removeChild(refreshForm);
+        .then(response => response.text())
+        .then(html => {
+            // Extract the documents table from the response
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(html, 'text/html');
+            const newDocumentsTab = doc.querySelector('#tab-dokumenti');
+            
+            if (newDocumentsTab) {
+                const currentTab = document.getElementById('tab-dokumenti');
+                if (currentTab) {
+                    // Find the documents display area (after upload section)
+                    const uploadSection = currentTab.querySelector('.seup-upload-section');
+                    const newUploadSection = newDocumentsTab.querySelector('.seup-upload-section');
+                    
+                    if (uploadSection && newUploadSection) {
+                        // Replace everything after upload section with new content
+                        let currentElement = uploadSection.nextElementSibling;
+                        let newElement = newUploadSection.nextElementSibling;
+                        
+                        // Remove all existing content after upload section
+                        while (currentElement) {
+                            const nextElement = currentElement.nextElementSibling;
+                            currentElement.remove();
+                            currentElement = nextElement;
+                        }
+                        
+                        // Add all new content after upload section
+                        while (newElement) {
+                            const nextElement = newElement.nextElementSibling;
+                            const clonedElement = newElement.cloneNode(true);
+                            uploadSection.insertAdjacentElement('afterend', clonedElement);
+                            newElement = nextElement;
+                        }
+                        
+                        // Re-add file type icons and update stats
+                        setTimeout(() => {
+                            addFileTypeIcons();
+                        // Update statistics
+                        updateStatistics();
+                        }, 100);
+                    }
+                }
+            }
+        })
+        .catch(error => {
+            console.error('Error refreshing documents:', error);
+            // Show error message but don't reload page
+            showMessage('Greška pri osvježavanju liste dokumenata', 'error');
         });
     }
 
